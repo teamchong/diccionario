@@ -42,13 +42,14 @@ describe('GET /exists/:word', () => {
     expect(res.body).toEqual({ exists: true });
   });
 
-  it('word exists as prefix', async () => {
+  it('prefix of existing word does not match', async () => {
     const wl = new FakeWordList(['hola', 'adios']);
     const app = createServer(wl);
 
-    const res = await request(app).get('/matches ');
+    const res = await request(app).get('/exists/hol');
 
-    expect(res.status).toBe( 404);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ exists: false });
   });
 
   it('word does not exist', async () => {
@@ -143,6 +144,36 @@ describe('POST /add', () => {
     expect(wl.addedWords).toEqual([]);
   });
 
+  it('returns 400 when word contains special characters', async () => {
+    const wl = new FakeWordList([]);
+    const app = createServer(wl);
+
+    const res = await request(app).post('/add').send({ word: 'hello-world' });
+
+    expect(res.status).toBe(400);
+    expect(res.text).toBe('bad request');
+  });
+
+  it('returns 400 when word contains spaces', async () => {
+    const wl = new FakeWordList([]);
+    const app = createServer(wl);
+
+    const res = await request(app).post('/add').send({ word: 'hello world' });
+
+    expect(res.status).toBe(400);
+    expect(res.text).toBe('bad request');
+  });
+
+  it('returns 400 when word contains punctuation', async () => {
+    const wl = new FakeWordList([]);
+    const app = createServer(wl);
+
+    const res = await request(app).post('/add').send({ word: 'hello!' });
+
+    expect(res.status).toBe(400);
+    expect(res.text).toBe('bad request');
+  });
+
   it('returns 500 when getWords fails', async () => {
     const wl = new FakeWordList([], new Error('disk error'));
     const app = createServer(wl);
@@ -151,5 +182,67 @@ describe('POST /add', () => {
 
     expect(res.status).toBe(500);
     expect(res.text).toBe('disk error');
+  });
+});
+
+describe('GET /matches/:prefix', () => {
+  it('returns matching words for a prefix', async () => {
+    const wl = new FakeWordList(['hola', 'hora', 'adios']);
+    const app = createServer(wl);
+
+    const res = await request(app).get('/matches/ho');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ matches: ['hola', 'hora'] });
+  });
+
+  it('returns matches case insensitively', async () => {
+    const wl = new FakeWordList(['Hola', 'Hora', 'Adios']);
+    const app = createServer(wl);
+
+    const res = await request(app).get('/matches/ho');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ matches: ['hola', 'hora'] });
+  });
+
+  it('returns empty array when no words match', async () => {
+    const wl = new FakeWordList(['hola', 'adios']);
+    const app = createServer(wl);
+
+    const res = await request(app).get('/matches/xyz');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ matches: [] });
+  });
+
+  it('returns empty array for empty word list', async () => {
+    const wl = new FakeWordList([]);
+    const app = createServer(wl);
+
+    const res = await request(app).get('/matches/ho');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ matches: [] });
+  });
+
+  it('returns 500 when getWords fails', async () => {
+    const wl = new FakeWordList([], new Error('boom'));
+    const app = createServer(wl);
+
+    const res = await request(app).get('/matches/ho');
+
+    expect(res.status).toBe(500);
+    expect(res.text).toBe('boom');
+  });
+
+  it('only returns words that start with the prefix', async () => {
+    const wl = new FakeWordList(['cat', 'catch', 'cathedral', 'dog']);
+    const app = createServer(wl);
+
+    const res = await request(app).get('/matches/cat');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ matches: ['cat', 'catch', 'cathedral'] });
   });
 });
