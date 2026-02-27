@@ -104,7 +104,7 @@ It only returns true if the word exists (exactly matches)in the wordlist
     let body: AddRequest;
     try {
       body = req.body as AddRequest;
-      if (typeof body.word !== 'string' || !body.word || !/[a-z]/i.test(body.word)) {
+      if (typeof body.word !== 'string' || !body.word || !/^[a-z]+$/i.test(body.word)) {
         res.status(400).send('bad request');
         return;
       }
