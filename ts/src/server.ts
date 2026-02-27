@@ -31,6 +31,15 @@ export class Server {
     this.app.get('/matches/:prefix', this.matches.bind(this));
   }
 
+  private async getSortedWords(): Promise<string[]> {
+    const words = await this.w.getWords();
+    for (let i = 0; i < words.length; i++) {
+      words[i] = words[i].toLowerCase();
+    }
+    words.sort();
+    return words;
+  }
+
   // Returns true if the word exists in the word list.
   // It performs case insensitive matching to the words in the wordlist.
   /*
@@ -49,20 +58,14 @@ It only returns true if the word exists (exactly matches)in the wordlist
 
       let wordlist: string[];
       try {
-        wordlist = await this.w.getWords();
+        wordlist = await this.getSortedWords();
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'unknown error';
         res.status(500).send(msg);
         return;
       }
 
-      const resp: ExistsResponse = { exists: false };
-
-      for (const w of wordlist) {
-        if (w.toLowerCase() === word.toLowerCase()) {
-          resp.exists = true;
-        }
-      }
+      const resp: ExistsResponse = { exists: binarySearch(wordlist, word.toLowerCase()) };
 
       res.status(200).json(resp);
     } catch (err) {
@@ -84,21 +87,14 @@ It only returns true if the word exists (exactly matches)in the wordlist
 
     let wordlist: string[];
     try {
-      wordlist = await this.w.getWords();
+      wordlist = await this.getSortedWords();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'unknown error';
       res.status(500).send(msg);
       return;
     }
 
-    const resp: MatchesResponse = { matches: [] };
-
-    // for (const w of wordlist) {
-    //   if (w.toLowerCase().startsWith(prefix)) {
-    //     resp.matches.push(w);
-    //   }
-    // }
-    resp.matches = wordlist.filter(w => w.startsWith(prefix));
+    const resp: MatchesResponse = { matches: findMatches(wordlist, prefix) };
 
     res.status(200).json(resp);
   }
@@ -115,14 +111,14 @@ It only returns true if the word exists (exactly matches)in the wordlist
 
       let wordlist: string[];
       try {
-        wordlist = await this.w.getWords();
+        wordlist = await this.getSortedWords();
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'unknown error';
         res.status(500).send(msg);
         return;
       }
 
-      if (wordlist.includes(body.word)) {
+      if (binarySearch(wordlist, body.word)) {
         res.status(409).send('word already exists');
         return;
       }
@@ -136,6 +132,32 @@ It only returns true if the word exists (exactly matches)in the wordlist
 
     res.status(204).json({ word: body.word });
   }
+}
+
+function lowerBound(sorted: string[], target: string): number {
+  let lo = 0;
+  let hi = sorted.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (sorted[mid] < target) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  return lo;
+}
+
+function binarySearch(sorted: string[], target: string): boolean {
+  const idx = lowerBound(sorted, target);
+  return idx < sorted.length && sorted[idx] === target;
+}
+
+function findMatches(sortedWords: string[], prefix: string): string[] {
+  const start = lowerBound(sortedWords, prefix);
+  const endPrefix = prefix.slice(0, -1) + String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1);
+  const end = lowerBound(sortedWords, endPrefix);
+  return sortedWords.slice(start, end);
 }
 
 export function createServer(wordList?: WordList) {
