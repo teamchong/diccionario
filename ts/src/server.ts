@@ -127,14 +127,14 @@ It only returns true if the word exists (exactly matches)in the wordlist
         return;
       }
 
-      this.w.addWord(body.word);
+      await this.w.addWord(body.word);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'invalid body';
       res.status(500).send(msg);
       return;
     }
 
-    // implement your logic here
+    res.status(204).json({ word: body.word });
   }
 }
 
