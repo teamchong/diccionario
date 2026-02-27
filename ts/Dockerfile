@@ -1,6 +1,6 @@
 FROM node:22
 
-EXPOSE 5000
+EXPOSE 5001
 
 WORKDIR /usr/src/diccionario
 

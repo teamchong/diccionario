@@ -29,6 +29,14 @@ describe('GET /exists/:word', () => {
         expect(res.body).toEqual({ exists: true });
     });
 
+    it('word exists in long list with exact match', async () => {
+        const wl = new FakeWordList(['hola', 'adios']);
+        const app = createServer(wl);
+        const res = await request(app).get('/exists/hola');
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ exists: true });
+    });
+
     it('word exists as prefix', async () => {
         const wl = new FakeWordList(['hola', 'adios']);
         const app = createServer(wl);

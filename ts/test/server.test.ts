@@ -30,14 +30,24 @@ describe('GET /exists/:word', () => {
     expect(res.body).toEqual({ exists: true });
   });
 
+  it('word exists with exact match (case sensitive)', async () => {
+    const wl = new FakeWordList(['Hola', 'adios']);
+    const app = createServer(wl);
+
+    const res = await request(app).get('/exists/hola');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ exists: true });
+  });
+
   it('word exists as prefix', async () => {
     const wl = new FakeWordList(['hola', 'adios']);
     const app = createServer(wl);
 
-    const res = await request(app).get('/exists/ad');
+    const res = await request(app).get('/matches ');
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ exists: true });
+    expect(res.body).toEqual({ matches: ['adios'] });
   });
 
   it('word does not exist', async () => {
@@ -64,9 +74,18 @@ describe('GET /exists/:word', () => {
     const wl = new FakeWordList([], new Error('boom'));
     const app = createServer(wl);
 
+    const res = await request(app).get('/exists/');
+
+    expect(res.status).toBe(404);
+  });
+
+  it('GetWords returns error', async () => {
+    const wl = new FakeWordList([], new Error('boom'));
+    const app = createServer(wl);
+
     const res = await request(app).get('/exists/hola');
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
     expect(res.text).toBe('boom');
   });
 });

@@ -20,6 +20,6 @@ export class FileWordList implements WordList {
   async getWords(): Promise<string[]> {
     const abs = path.resolve(this.filename);
     const data = await fs.readFile(abs, { encoding: 'utf8' });
-    return data.split('\n').slice(0, 100000);
+    return data.toLowerCase().split('\n'); //.slice(0, 100000);
   }
 }
